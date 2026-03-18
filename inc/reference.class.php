@@ -794,12 +794,12 @@ class PluginOrderReference extends CommonDBTM
                 }
 
                 $condition = [];
-                if (class_exists($itemtype . "Type", false) && $types_id != 0) {
+                if (class_exists($itemtype . "Type") && $types_id != 0) {
                     $fk = getForeignKeyFieldForTable(getTableForItemType($itemtype . "Type"));
                     $condition[$fk] = $types_id;
                 }
 
-                if (class_exists($itemtype . "Model", false) && $models_id != 0) {
+                if (class_exists($itemtype . "Model") && $models_id != 0) {
                     $fk = getForeignKeyFieldForTable(getTableForItemType($itemtype . "Model"));
                     $condition[$fk] = $models_id;
                 }

@@ -1036,7 +1036,7 @@ class PluginOrderOrder_Item extends CommonDBRelation // phpcs:ignore
         }
 
         /* type */
-        if (file_exists(GLPI_ROOT . "/src/" . $data_ref["itemtype"] . "Type.php")) {
+        if (class_exists($data_ref["itemtype"] . "Type")) {
             $entrie['type'] = Dropdown::getDropdownName(
                 getTableForItemType($data_ref["itemtype"] . "Type"),
                 $data_ref["types_id"],
@@ -1048,7 +1048,7 @@ class PluginOrderOrder_Item extends CommonDBRelation // phpcs:ignore
         }
 
         /* modele */
-        if (file_exists(GLPI_ROOT . "/src/" . $data_ref["itemtype"] . "Model.php")) {
+        if (class_exists($data_ref["itemtype"] . "Model")) {
             $entrie['model'] = Dropdown::getDropdownName(
                 getTableForItemType($data_ref["itemtype"] . "Model"),
                 $data_ref["models_id"],
@@ -1807,7 +1807,7 @@ class PluginOrderOrder_Item extends CommonDBRelation // phpcs:ignore
 
                 //Type
                 echo "<td align='center'>";
-                if (file_exists(GLPI_ROOT . "/src/" . $data["itemtype"] . "Type.php")) {
+                if (class_exists($data["itemtype"] . "Type")) {
                     echo Dropdown::getDropdownName(
                         getTableForItemType($data["itemtype"] . "Type"),
                         (int) $data["types_id"],
@@ -1817,7 +1817,7 @@ class PluginOrderOrder_Item extends CommonDBRelation // phpcs:ignore
                 echo "</td>";
                 //Model
                 echo "<td align='center'>";
-                if (file_exists(GLPI_ROOT . "/src/" . $data["itemtype"] . "Model.php")) {
+                if (class_exists($data["itemtype"] . "Model")) {
                     echo Dropdown::getDropdownName(
                         getTableForItemType($data["itemtype"] . "Model"),
                         (int) $data["models_id"],

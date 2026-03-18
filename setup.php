@@ -125,6 +125,14 @@ function plugin_init_order()
             'Pdu',
         ];
 
+        // Add GLPI 11.x custom asset definitions
+        if (class_exists('Glpi\Asset\AssetDefinitionManager')) {
+            $manager = \Glpi\Asset\AssetDefinitionManager::getInstance();
+            foreach ($manager->getDefinitions() as $definition) {
+                $ORDER_TYPES[] = $definition->getAssetClassName();
+            }
+        }
+
         $CFG_GLPI['plugin_order_types'] = $ORDER_TYPES;
 
         $PLUGIN_HOOKS['pre_item_purge']['order'] = [

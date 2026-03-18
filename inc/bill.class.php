@@ -434,7 +434,7 @@ class PluginOrderBill extends CommonDropdown
 
                 //Type
                 echo "<td align='center'>";
-                if (file_exists($CFG_GLPI['root_doc'] . "/src/" . $data["itemtype"] . "Type.php")) {
+                if (class_exists($data["itemtype"] . "Type")) {
                     echo Dropdown::getDropdownName(
                         getTableForItemType($data["itemtype"] . "Type"),
                         (int) $data["types_id"],
@@ -445,7 +445,7 @@ class PluginOrderBill extends CommonDropdown
 
                 //Model
                 echo "<td align='center'>";
-                if (file_exists($CFG_GLPI['root_doc'] . "/src/" . $data["itemtype"] . "Model.php")) {
+                if (class_exists($data["itemtype"] . "Model")) {
                     echo Dropdown::getDropdownName(
                         getTableForItemType($data["itemtype"] . "Model"),
                         (int) $data["models_id"],

@@ -296,13 +296,7 @@ function plugin_order_giveItem($type, $ID, $data, $num)
     switch ($table . '.' . $field) {
         /* display associated items with order */
         case "glpi_plugin_order_references.types_id":
-            if ($itemtype == 'PluginOrderOther') {
-                $file = PLUGIN_ORDER_DIR . "/inc/othertype.class.php";
-            } else {
-                $file = GLPI_ROOT . "/src/" . $itemtype . "Type.php";
-            }
-
-            if (file_exists($file)) {
+            if (class_exists($itemtype . "Type")) {
                 return Dropdown::getDropdownName(
                     getTableForItemType($itemtype . "Type"),
                     $itemnum,
@@ -312,7 +306,7 @@ function plugin_order_giveItem($type, $ID, $data, $num)
             }
             // no break
         case "glpi_plugin_order_references.models_id":
-            if (file_exists(GLPI_ROOT . "/src/" . $itemtype . "Model.php")) {
+            if (class_exists($itemtype . "Model")) {
                 return Dropdown::getDropdownName(
                     getTableForItemType($itemtype . "Model"),
                     $itemnum,
