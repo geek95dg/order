@@ -16,6 +16,8 @@ This plugin allows you to manage order management within GLPIi:
 - Products references management
 - Order management (with approval workflow)
 - Budgets management
+- GLPI 11+ user-defined custom assets support as product references
+- OT (fixed assets protocol) PDF generation from orders
 
 ## Documentation
 
@@ -34,6 +36,16 @@ The GLPI Network services are available through our [Partner's Network](http://w
 
 Obtain a personalized service experience, associated with benefits and opportunities.
 
+## Changelog
+
+### 2.0.0 (Unreleased)
+
+**New Features**
+
+- **GLPI 11+ Custom Assets Support**: User-defined custom assets (stored in `glpi_assets_assets`) are now dynamically discovered and available as product references. Type, Model, and Template dropdowns work correctly for custom asset classes, including proper scoping via `assets_assetdefinitions_id`.
+
+- **OT Protocol PDF Generation**: Generate OT (fixed assets protocol) documents directly from orders. Accessible via the "Generate OT" action in the Actions dropdown. Prompts for a Cost Center (MPK) value, then generates a PDF containing all delivered items with their serial numbers, values, and delivery dates. Uses a system binary fallback chain (wkhtmltopdf → Chromium → mPDF → HTML). Generated documents are saved to the GLPI document system and linked to the order.
+
 ## Contributing
 
 * Open a ticket for each bug/feature so it can be discussed
@@ -46,4 +58,3 @@ Obtain a personalized service experience, associated with benefits and opportuni
 
 * **Code**: you can redistribute it and/or modify
     it under the terms of the GNU General Public License ([GPL-2.0](https://www.gnu.org/licenses/gpl-2.0.en.html)).
-
