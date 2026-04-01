@@ -295,6 +295,107 @@ class PluginOrderReference extends CommonDBTM
     }
 
 
+    /**
+     * Get the Type dropdown class for an itemtype, supporting GLPI 11+ custom assets.
+     *
+     * @param string $itemtype The itemtype class name
+     * @return string|null The Type class name, or null if none exists
+     */
+    public static function getTypeClassForItemtype(string $itemtype): ?string
+    {
+        // Standard convention (e.g. Computer → ComputerType)
+        $type_class = $itemtype . 'Type';
+        if (class_exists($type_class)) {
+            return $type_class;
+        }
+
+        // GLPI 11+ custom assets: resolve via AssetDefinition
+        if (class_exists('Glpi\Asset\Asset') && is_a($itemtype, 'Glpi\Asset\Asset', true)) {
+            $item = getItemForItemtype($itemtype);
+            if ($item !== false && method_exists($item, 'getDefinition')) {
+                $definition = $item->getDefinition();
+                if ($definition !== null && method_exists($definition, 'getAssetTypeClassName')) {
+                    $custom_type_class = $definition->getAssetTypeClassName();
+                    if (!empty($custom_type_class) && class_exists($custom_type_class)) {
+                        return $custom_type_class;
+                    }
+                }
+            }
+        }
+
+        return null;
+    }
+
+
+    /**
+     * Get the Model dropdown class for an itemtype, supporting GLPI 11+ custom assets.
+     *
+     * @param string $itemtype The itemtype class name
+     * @return string|null The Model class name, or null if none exists
+     */
+    public static function getModelClassForItemtype(string $itemtype): ?string
+    {
+        // Standard convention (e.g. Computer → ComputerModel)
+        $model_class = $itemtype . 'Model';
+        if (class_exists($model_class)) {
+            return $model_class;
+        }
+
+        // GLPI 11+ custom assets: resolve via AssetDefinition
+        if (class_exists('Glpi\Asset\Asset') && is_a($itemtype, 'Glpi\Asset\Asset', true)) {
+            $item = getItemForItemtype($itemtype);
+            if ($item !== false && method_exists($item, 'getDefinition')) {
+                $definition = $item->getDefinition();
+                if ($definition !== null && method_exists($definition, 'getAssetModelClassName')) {
+                    $custom_model_class = $definition->getAssetModelClassName();
+                    if (!empty($custom_model_class) && class_exists($custom_model_class)) {
+                        return $custom_model_class;
+                    }
+                }
+            }
+        }
+
+        return null;
+    }
+
+
+    /**
+     * Check if an itemtype is a GLPI 11+ custom asset.
+     *
+     * @param string $itemtype The itemtype class name
+     * @return bool
+     */
+    public static function isCustomAsset(string $itemtype): bool
+    {
+        return class_exists('Glpi\Asset\Asset')
+            && is_a($itemtype, 'Glpi\Asset\Asset', true);
+    }
+
+
+    /**
+     * Get the AssetDefinition ID for a GLPI 11+ custom asset itemtype.
+     *
+     * @param string $itemtype The itemtype class name
+     * @return int|null The definition ID, or null if not a custom asset
+     */
+    public static function getAssetDefinitionId(string $itemtype): ?int
+    {
+        if (!self::isCustomAsset($itemtype)) {
+            return null;
+        }
+
+        $item = getItemForItemtype($itemtype);
+        if ($item !== false && method_exists($item, 'getDefinition')) {
+            $definition = $item->getDefinition();
+            if ($definition !== null) {
+                return (int) $definition->getID();
+            }
+        }
+
+        return null;
+    }
+
+
     public function prepareInputForAdd($input)
     {
         if (!isset($input["name"]) || $input["name"] == '') {
@@ -403,7 +504,7 @@ class PluginOrderReference extends CommonDBTM
     }
 
 
-    public function dropdownTemplate($name, $entity, $table, $value = 0)
+    public function dropdownTemplate($name, $entity, $table, $value = 0, $itemtype = '')
     {
         /** @var DBmysql $DB */
         global $DB;
@@ -419,6 +520,15 @@ class PluginOrderReference extends CommonDBTM
             'GROUP' => 'template_name',
             'ORDER' => 'template_name',
         ];
+
+        // For GLPI 11+ custom assets, scope templates to the specific asset definition
+        // since all custom assets share the glpi_assets_assets table
+        if (!empty($itemtype)) {
+            $definition_id = self::getAssetDefinitionId($itemtype);
+            if ($definition_id !== null) {
+                $query['WHERE']['assets_assetdefinitions_id'] = $definition_id;
+            }
+        }
 
         $option[0] = Dropdown::EMPTY_VALUE;
         foreach ($DB->request($query) as $data) {
@@ -490,6 +600,11 @@ class PluginOrderReference extends CommonDBTM
                         'is_template' => 1,
                     ],
                 ];
+                // For GLPI 11+ custom assets, scope to the specific asset definition
+                $definition_id = self::getAssetDefinitionId($itemtype);
+                if ($definition_id !== null) {
+                    $criteria_template['WHERE']['assets_assetdefinitions_id'] = $definition_id;
+                }
                 $result_template = $DB->request($criteria_template);
                 if (count($result_template) >= 1) {
                     $row_template = $result_template->current();
@@ -692,8 +807,8 @@ class PluginOrderReference extends CommonDBTM
         echo "<td>";
         echo "<span id='show_types_id'>";
         if ($options['item']) {
-            $itemtypeclass = $options['item'] . "Type";
-            if (class_exists($itemtypeclass)) {
+            $itemtypeclass = self::getTypeClassForItemtype($options['item']);
+            if ($itemtypeclass !== null) {
                 if (!$reference_in_use) {
                     Dropdown::show($itemtypeclass, [
                         'name'  => "types_id",
@@ -711,8 +826,9 @@ class PluginOrderReference extends CommonDBTM
         echo "<tr class='tab_bg_1'><td>" . __s("Model") . "</td>";
         echo "<td>";
         echo "<span id='show_models_id'>";
-        if ($options['item'] && class_exists($itemtypeclass)) {
-            Dropdown::show($options['item'] . "Model", [
+        $itemmodelclass = $options['item'] ? self::getModelClassForItemtype($options['item']) : null;
+        if ($itemmodelclass !== null) {
+            Dropdown::show($itemmodelclass, [
                 'name'  => "models_id",
                 'value' => $this->fields["models_id"],
             ]);
@@ -724,16 +840,17 @@ class PluginOrderReference extends CommonDBTM
         echo "<td>" . __s("Template name") . "</td>";
         echo "<td>";
         echo "<span id='show_templates_id'>";
-        if (
-            !empty($options['item'])
-            && $DB->fieldExists($options['item']::getTable(), 'is_template')
-        ) {
-            $this->dropdownTemplate(
-                'templates_id',
-                $this->fields['entities_id'],
-                $options['item']::getTable(),
-                $this->fields['templates_id'],
-            );
+        if (!empty($options['item'])) {
+            $item_instance = getItemForItemtype($options['item']);
+            if ($item_instance !== false && $item_instance->maybeTemplate()) {
+                $this->dropdownTemplate(
+                    'templates_id',
+                    $this->fields['entities_id'],
+                    $item_instance->getTable(),
+                    $this->fields['templates_id'],
+                    $options['item'],
+                );
+            }
         }
 
         echo "</span>";
@@ -794,13 +911,15 @@ class PluginOrderReference extends CommonDBTM
                 }
 
                 $condition = [];
-                if (class_exists($itemtype . "Type", false) && $types_id != 0) {
-                    $fk = getForeignKeyFieldForTable(getTableForItemType($itemtype . "Type"));
+                $type_class = self::getTypeClassForItemtype($itemtype);
+                if ($type_class !== null && $types_id != 0) {
+                    $fk = getForeignKeyFieldForTable(getTableForItemType($type_class));
                     $condition[$fk] = $types_id;
                 }
 
-                if (class_exists($itemtype . "Model", false) && $models_id != 0) {
-                    $fk = getForeignKeyFieldForTable(getTableForItemType($itemtype . "Model"));
+                $model_class = self::getModelClassForItemtype($itemtype);
+                if ($model_class !== null && $models_id != 0) {
+                    $fk = getForeignKeyFieldForTable(getTableForItemType($model_class));
                     $condition[$fk] = $models_id;
                 }
 
