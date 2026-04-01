@@ -1259,14 +1259,20 @@ class PluginOrderLink extends CommonDBChild
                 $input["manufacturers_id"] = $reference->fields["manufacturers_id"];
             }
 
-            $typefield = getForeignKeyFieldForTable(getTableForItemType($add_item["itemtype"] . "Type"));
-            if (!array_key_exists($typefield, $input) || $input[$typefield] == 0) {
-                $input[$typefield] = $reference->fields["types_id"];
+            $type_class = PluginOrderReference::getTypeClassForItemtype($add_item["itemtype"]);
+            if ($type_class !== null) {
+                $typefield = getForeignKeyFieldForTable(getTableForItemType($type_class));
+                if (!array_key_exists($typefield, $input) || $input[$typefield] == 0) {
+                    $input[$typefield] = $reference->fields["types_id"];
+                }
             }
 
-            $modelfield = getForeignKeyFieldForTable(getTableForItemType($add_item["itemtype"] . "Model"));
-            if (!array_key_exists($modelfield, $input) || $input[$modelfield] == 0) {
-                $input[$modelfield] = $reference->fields["models_id"];
+            $model_class = PluginOrderReference::getModelClassForItemtype($add_item["itemtype"]);
+            if ($model_class !== null) {
+                $modelfield = getForeignKeyFieldForTable(getTableForItemType($model_class));
+                if (!array_key_exists($modelfield, $input) || $input[$modelfield] == 0) {
+                    $input[$modelfield] = $reference->fields["models_id"];
+                }
             }
 
             $newID = $item->add($input);

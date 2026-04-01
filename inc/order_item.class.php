@@ -1036,9 +1036,10 @@ class PluginOrderOrder_Item extends CommonDBRelation // phpcs:ignore
         }
 
         /* type */
-        if (file_exists(GLPI_ROOT . "/src/" . $data_ref["itemtype"] . "Type.php")) {
+        $type_class = PluginOrderReference::getTypeClassForItemtype($data_ref["itemtype"]);
+        if ($type_class !== null) {
             $entrie['type'] = Dropdown::getDropdownName(
-                getTableForItemType($data_ref["itemtype"] . "Type"),
+                getTableForItemType($type_class),
                 $data_ref["types_id"],
             );
         } elseif ($data_ref["itemtype"] == "PluginOrderOther") {
@@ -1048,9 +1049,10 @@ class PluginOrderOrder_Item extends CommonDBRelation // phpcs:ignore
         }
 
         /* modele */
-        if (file_exists(GLPI_ROOT . "/src/" . $data_ref["itemtype"] . "Model.php")) {
+        $model_class = PluginOrderReference::getModelClassForItemtype($data_ref["itemtype"]);
+        if ($model_class !== null) {
             $entrie['model'] = Dropdown::getDropdownName(
-                getTableForItemType($data_ref["itemtype"] . "Model"),
+                getTableForItemType($model_class),
                 $data_ref["models_id"],
             );
         } else {
@@ -1807,9 +1809,10 @@ class PluginOrderOrder_Item extends CommonDBRelation // phpcs:ignore
 
                 //Type
                 echo "<td align='center'>";
-                if (file_exists(GLPI_ROOT . "/src/" . $data["itemtype"] . "Type.php")) {
+                $type_class = PluginOrderReference::getTypeClassForItemtype($data["itemtype"]);
+                if ($type_class !== null) {
                     echo Dropdown::getDropdownName(
-                        getTableForItemType($data["itemtype"] . "Type"),
+                        getTableForItemType($type_class),
                         (int) $data["types_id"],
                     );
                 }
@@ -1817,9 +1820,10 @@ class PluginOrderOrder_Item extends CommonDBRelation // phpcs:ignore
                 echo "</td>";
                 //Model
                 echo "<td align='center'>";
-                if (file_exists(GLPI_ROOT . "/src/" . $data["itemtype"] . "Model.php")) {
+                $model_class = PluginOrderReference::getModelClassForItemtype($data["itemtype"]);
+                if ($model_class !== null) {
                     echo Dropdown::getDropdownName(
-                        getTableForItemType($data["itemtype"] . "Model"),
+                        getTableForItemType($model_class),
                         (int) $data["models_id"],
                     );
                 }

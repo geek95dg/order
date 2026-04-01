@@ -39,14 +39,16 @@ $PluginOrderReference = new PluginOrderReference();
 if ($_POST["itemtype"]) {
     switch ($_POST["field"]) {
         case "types_id":
-            if (class_exists($_POST["itemtype"] . 'Type')) {
-                Dropdown::show($_POST["itemtype"] . "Type", ['name' => "types_id"]);
+            $type_class = PluginOrderReference::getTypeClassForItemtype($_POST["itemtype"]);
+            if ($type_class !== null) {
+                Dropdown::show($type_class, ['name' => "types_id"]);
             }
 
             break;
         case "models_id":
-            if (class_exists($_POST["itemtype"] . 'Model')) {
-                Dropdown::show($_POST["itemtype"] . "Model", ['name' => "models_id"]);
+            $model_class = PluginOrderReference::getModelClassForItemtype($_POST["itemtype"]);
+            if ($model_class !== null) {
+                Dropdown::show($model_class, ['name' => "models_id"]);
             } else {
                 return "";
             }
@@ -56,7 +58,7 @@ if ($_POST["itemtype"]) {
             $item = getItemForItemtype($_POST['itemtype']);
             if ($item->maybeTemplate()) {
                 $table = getTableForItemType($_POST["itemtype"]);
-                $PluginOrderReference->dropdownTemplate("templates_id", $_POST["entity_restrict"], $table);
+                $PluginOrderReference->dropdownTemplate("templates_id", $_POST["entity_restrict"], $table, 0, $_POST["itemtype"]);
             } else {
                 return "";
             }

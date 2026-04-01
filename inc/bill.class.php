@@ -434,9 +434,10 @@ class PluginOrderBill extends CommonDropdown
 
                 //Type
                 echo "<td align='center'>";
-                if (file_exists($CFG_GLPI['root_doc'] . "/src/" . $data["itemtype"] . "Type.php")) {
+                $type_class = PluginOrderReference::getTypeClassForItemtype($data["itemtype"]);
+                if ($type_class !== null) {
                     echo Dropdown::getDropdownName(
-                        getTableForItemType($data["itemtype"] . "Type"),
+                        getTableForItemType($type_class),
                         (int) $data["types_id"],
                     );
                 }
@@ -445,9 +446,10 @@ class PluginOrderBill extends CommonDropdown
 
                 //Model
                 echo "<td align='center'>";
-                if (file_exists($CFG_GLPI['root_doc'] . "/src/" . $data["itemtype"] . "Model.php")) {
+                $model_class = PluginOrderReference::getModelClassForItemtype($data["itemtype"]);
+                if ($model_class !== null) {
                     echo Dropdown::getDropdownName(
-                        getTableForItemType($data["itemtype"] . "Model"),
+                        getTableForItemType($model_class),
                         (int) $data["models_id"],
                     );
                 }

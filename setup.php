@@ -125,6 +125,22 @@ function plugin_init_order()
             'Pdu',
         ];
 
+        // GLPI 11+ custom assets support: dynamically discover user-defined asset types
+        if (class_exists('Glpi\Asset\AssetDefinition')) {
+            try {
+                $asset_definition = new \Glpi\Asset\AssetDefinition();
+                foreach ($asset_definition->find(['is_active' => 1]) as $def) {
+                    $asset_definition->getFromDB($def['id']);
+                    $concrete_class = $asset_definition->getConcreteClassName();
+                    if (!empty($concrete_class) && class_exists($concrete_class) && !in_array($concrete_class, $ORDER_TYPES)) {
+                        $ORDER_TYPES[] = $concrete_class;
+                    }
+                }
+            } catch (\Throwable $e) {
+                // Tables may not exist during install/upgrade — silently ignore
+            }
+        }
+
         $CFG_GLPI['plugin_order_types'] = $ORDER_TYPES;
 
         $PLUGIN_HOOKS['pre_item_purge']['order'] = [
