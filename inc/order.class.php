@@ -2562,6 +2562,11 @@ class PluginOrderOrder extends CommonDBTM
             return true;
         }
 
+        if ($ma->getAction() === 'generate_ot') {
+            PluginOrderOt::showMassiveActionSubForm();
+            return true;
+        }
+
         return true;
     }
 
@@ -2574,6 +2579,10 @@ class PluginOrderOrder extends CommonDBTM
 
         if ($isadmin && (Session::haveRight('transfer', READ) && Session::isMultiEntitiesMode())) {
             $actions['PluginOrderOrder:transfert'] = __s('Transfer');
+        }
+
+        if (static::canView()) {
+            $actions['PluginOrderOrder:generate_ot'] = __s('Generate OT', 'order');
         }
 
         return $actions;
@@ -2599,6 +2608,39 @@ class PluginOrderOrder extends CommonDBTM
                     ]);
                     $ma->itemDone($item->getType(), $id, MassiveAction::ACTION_OK);
                 }
+            }
+
+            return;
+        }
+
+        if ($ma->getAction() === "generate_ot") {
+            /** @var array $CFG_GLPI */
+            global $CFG_GLPI;
+
+            $input       = $ma->getInput();
+            $cost_center = $input['cost_center'] ?? '';
+            $last_doc_id = 0;
+
+            foreach ($ids as $id) {
+                $ot     = new PluginOrderOt();
+                $doc_id = $ot->processAction((int) $id, $cost_center);
+                if ($doc_id) {
+                    $last_doc_id = $doc_id;
+                    $ma->itemDone($item->getType(), $id, MassiveAction::ACTION_OK);
+                    Session::addMessageAfterRedirect(
+                        sprintf(__s("OT document generated for order #%s", "order"), $id),
+                        true,
+                        INFO,
+                    );
+                } else {
+                    $ma->itemDone($item->getType(), $id, MassiveAction::ACTION_KO);
+                    $ma->addMessage(__s("Failed to generate OT document", "order"));
+                }
+            }
+
+            // Redirect to download the last generated document
+            if ($last_doc_id > 0) {
+                $ma->setRedirect($CFG_GLPI['root_doc'] . '/plugins/order/front/ot.form.php?download=1&doc_id=' . $last_doc_id);
             }
 
             return;
