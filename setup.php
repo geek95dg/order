@@ -128,12 +128,28 @@ function plugin_init_order()
         // GLPI 11+ custom assets support: dynamically discover user-defined asset types
         if (class_exists('Glpi\Asset\AssetDefinition')) {
             try {
-                $asset_definition = new \Glpi\Asset\AssetDefinition();
-                foreach ($asset_definition->find(['is_active' => 1]) as $def) {
-                    $asset_definition->getFromDB($def['id']);
-                    $concrete_class = $asset_definition->getConcreteClassName();
-                    if (!empty($concrete_class) && class_exists($concrete_class) && !in_array($concrete_class, $ORDER_TYPES)) {
-                        $ORDER_TYPES[] = $concrete_class;
+                // Primary method: use $CFG_GLPI['asset_types'] which GLPI populates with
+                // both standard and custom asset types during its own init
+                if (!empty($CFG_GLPI['asset_types'])) {
+                    foreach ($CFG_GLPI['asset_types'] as $asset_class) {
+                        if (
+                            !in_array($asset_class, $ORDER_TYPES)
+                            && is_a($asset_class, 'Glpi\Asset\Asset', true)
+                        ) {
+                            $ORDER_TYPES[] = $asset_class;
+                        }
+                    }
+                }
+
+                // Fallback: query AssetDefinition table directly
+                if (empty($CFG_GLPI['asset_types'])) {
+                    $asset_definition = new \Glpi\Asset\AssetDefinition();
+                    foreach ($asset_definition->find(['is_active' => 1]) as $def) {
+                        $asset_definition->getFromDB($def['id']);
+                        $concrete_class = $asset_definition->getConcreteClassName();
+                        if (!empty($concrete_class) && !in_array($concrete_class, $ORDER_TYPES)) {
+                            $ORDER_TYPES[] = $concrete_class;
+                        }
                     }
                 }
             } catch (\Throwable $e) {
