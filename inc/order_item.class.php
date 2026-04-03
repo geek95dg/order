@@ -276,6 +276,7 @@ class PluginOrderOrder_Item extends CommonDBRelation // phpcs:ignore
         $types = $ORDER_TYPES;
         foreach ($types as $key => $type) {
             if (!class_exists($type)) {
+                unset($types[$key]);
                 continue;
             }
 
