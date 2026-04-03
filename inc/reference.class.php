@@ -367,8 +367,13 @@ class PluginOrderReference extends CommonDBTM
      */
     public static function isCustomAsset(string $itemtype): bool
     {
-        return class_exists('Glpi\Asset\Asset')
-            && is_a($itemtype, 'Glpi\Asset\Asset', true);
+        // Check by class hierarchy if the class exists
+        if (class_exists('Glpi\Asset\Asset') && is_a($itemtype, 'Glpi\Asset\Asset', true)) {
+            return true;
+        }
+
+        // Check by namespace pattern: Glpi\CustomAsset\{name}Asset
+        return (bool) preg_match('/^Glpi\\\\CustomAsset\\\\/', $itemtype);
     }
 
 
@@ -384,6 +389,7 @@ class PluginOrderReference extends CommonDBTM
             return null;
         }
 
+        // Try ORM approach
         $item = getItemForItemtype($itemtype);
         if ($item !== false && method_exists($item, 'getDefinition')) {
             $definition = $item->getDefinition();
@@ -392,7 +398,63 @@ class PluginOrderReference extends CommonDBTM
             }
         }
 
+        // Fallback: extract system_name from class and look up in DB
+        if (preg_match('/^Glpi\\\\CustomAsset\\\\(.+)Asset$/', $itemtype, $matches)) {
+            /** @var DBmysql $DB */
+            global $DB;
+            try {
+                if ($DB->tableExists('glpi_assets_assetdefinitions')) {
+                    $result = $DB->request([
+                        'SELECT' => ['id'],
+                        'FROM'   => 'glpi_assets_assetdefinitions',
+                        'WHERE'  => ['system_name' => $matches[1]],
+                        'LIMIT'  => 1,
+                    ]);
+                    foreach ($result as $row) {
+                        return (int) $row['id'];
+                    }
+                }
+            } catch (\Throwable $e) {
+                // Fall through
+            }
+        }
+
         return null;
+    }
+
+
+    /**
+     * Get the display label for a custom asset type from glpi_assets_assetdefinitions.
+     *
+     * @param string $itemtype The itemtype class name (e.g. Glpi\CustomAsset\LaptopAsset)
+     * @return string The label from the definition, or the class name as fallback
+     */
+    public static function getCustomAssetLabel(string $itemtype): string
+    {
+        /** @var DBmysql $DB */
+        global $DB;
+
+        // Extract system_name from class: Glpi\CustomAsset\{system_name}Asset
+        if (preg_match('/^Glpi\\\\CustomAsset\\\\(.+)Asset$/', $itemtype, $matches)) {
+            $system_name = $matches[1];
+            try {
+                if ($DB->tableExists('glpi_assets_assetdefinitions')) {
+                    $result = $DB->request([
+                        'SELECT' => ['label'],
+                        'FROM'   => 'glpi_assets_assetdefinitions',
+                        'WHERE'  => ['system_name' => $system_name],
+                        'LIMIT'  => 1,
+                    ]);
+                    foreach ($result as $row) {
+                        return htmlspecialchars($row['label'], ENT_QUOTES, 'UTF-8');
+                    }
+                }
+            } catch (\Throwable $e) {
+                // Fall through to default
+            }
+        }
+
+        return htmlspecialchars($itemtype, ENT_QUOTES, 'UTF-8');
     }
 
 
@@ -679,12 +741,20 @@ class PluginOrderReference extends CommonDBTM
 
         foreach ($types as $type) {
             $item = getItemForItemtype($type);
-            echo "<option value='" . $type . "' ";
+            $label = '';
+            if ($item !== false) {
+                $label = $item->getTypeName();
+            } else {
+                // For custom assets, try to get label from glpi_assets_assetdefinitions
+                $label = self::getCustomAssetLabel($type);
+            }
+
+            echo "<option value='" . htmlspecialchars($type, ENT_QUOTES, 'UTF-8') . "' ";
             if (isset($p['value']) && $p['value'] == $type) {
                 echo "selected";
             }
 
-            echo " >" . ($item !== false ? $item->getTypeName() : $type) . "</option>\n";
+            echo " >" . $label . "</option>\n";
         }
 
         echo "</select>";
@@ -789,7 +859,7 @@ class PluginOrderReference extends CommonDBTM
         if ($id > 0) {
             $itemtype = $this->fields["itemtype"];
             $item     = getItemForItemtype($itemtype);
-            echo($item !== false ? $item->getTypeName() : $itemtype);
+            echo($item !== false ? $item->getTypeName() : self::getCustomAssetLabel($itemtype));
             echo Html::hidden('itemtype', ['value' => $itemtype]);
         } else {
             $this->dropdownAllItems([

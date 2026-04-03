@@ -126,14 +126,41 @@ function plugin_init_order()
         ];
 
         // GLPI 11+ custom assets support: dynamically discover user-defined asset types
+        // Custom assets are stored in glpi_assets_assetdefinitions (definitions) and
+        // glpi_assets_assets (instances). The concrete class name follows the pattern:
+        // Glpi\CustomAsset\{system_name}Asset
         if (class_exists('Glpi\Asset\AssetDefinition')) {
             try {
+                // Try ORM approach first
                 $asset_definition = new \Glpi\Asset\AssetDefinition();
+                $found_via_orm = false;
                 foreach ($asset_definition->find(['is_active' => 1]) as $def) {
                     $asset_definition->getFromDB($def['id']);
-                    $concrete_class = $asset_definition->getAssetClassName();
-                    if (!empty($concrete_class) && !in_array($concrete_class, $ORDER_TYPES)) {
-                        $ORDER_TYPES[] = $concrete_class;
+                    if (method_exists($asset_definition, 'getAssetClassName')) {
+                        $concrete_class = $asset_definition->getAssetClassName();
+                        if (!empty($concrete_class) && !in_array($concrete_class, $ORDER_TYPES)) {
+                            $ORDER_TYPES[] = $concrete_class;
+                            $found_via_orm = true;
+                        }
+                    }
+                }
+
+                // Fallback: query DB directly and construct class names
+                if (!$found_via_orm) {
+                    /** @var DBmysql $DB */
+                    global $DB;
+                    if ($DB->tableExists('glpi_assets_assetdefinitions')) {
+                        $result = $DB->request([
+                            'SELECT' => ['id', 'system_name', 'label'],
+                            'FROM'   => 'glpi_assets_assetdefinitions',
+                            'WHERE'  => ['is_active' => 1],
+                        ]);
+                        foreach ($result as $row) {
+                            $concrete_class = 'Glpi\\CustomAsset\\' . $row['system_name'] . 'Asset';
+                            if (!in_array($concrete_class, $ORDER_TYPES)) {
+                                $ORDER_TYPES[] = $concrete_class;
+                            }
+                        }
                     }
                 }
             } catch (\Throwable $e) {
