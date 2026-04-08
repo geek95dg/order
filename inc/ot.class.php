@@ -118,16 +118,25 @@ class PluginOrderOt
         $total_value = 0.0;
 
         foreach ($items_result as $item_data) {
-            $asset_name   = '';
             $asset_serial = '';
             $itemtype     = $item_data['itemtype'] ?? '';
             $items_id     = (int) ($item_data['items_id'] ?? 0);
 
+            // Get serial number from the delivered asset in GLPI
             if ($itemtype && $items_id > 0) {
                 $asset = getItemForItemtype($itemtype);
                 if ($asset !== false && $asset->getFromDB($items_id)) {
-                    $asset_name   = $asset->fields['name'] ?? '';
                     $asset_serial = $asset->fields['serial'] ?? '';
+                }
+            }
+
+            // Get product reference name from the order's reference
+            $ref_name = '';
+            $ref_id = (int) ($item_data['plugin_order_references_id'] ?? 0);
+            if ($ref_id > 0) {
+                $reference = new PluginOrderReference();
+                if ($reference->getFromDB($ref_id)) {
+                    $ref_name = $reference->fields['name'] ?? '';
                 }
             }
 
@@ -140,7 +149,7 @@ class PluginOrderOt
             }
 
             $rows[] = [
-                'name'          => htmlspecialchars($asset_name, ENT_QUOTES, 'UTF-8'),
+                'name'          => htmlspecialchars($ref_name, ENT_QUOTES, 'UTF-8'),
                 'serial'        => htmlspecialchars($asset_serial, ENT_QUOTES, 'UTF-8'),
                 'price'         => number_format($price, 2, ',', ' '),
                 'delivery_date' => htmlspecialchars($delivery_date, ENT_QUOTES, 'UTF-8'),
@@ -189,7 +198,7 @@ class PluginOrderOt
             </tr>\n";
         }
 
-        $th_style = "border:1px solid #000;padding:4px;text-align:center;font-weight:bold;font-size:9px;background:#f0f0f0;";
+        $th_style = "border:1px solid #000;padding:3px;text-align:center;font-weight:bold;font-size:7px;background:#f0f0f0;";
 
         $html = <<<HTML
 <!DOCTYPE html>
@@ -198,10 +207,10 @@ class PluginOrderOt
 <meta charset="UTF-8">
 <title>OT - {$num_order_esc}</title>
 <style>
-    @page { size: A4 landscape; margin: 10mm 12mm; }
-    body { font-family: 'DejaVu Sans', Arial, sans-serif; font-size: 10px; margin: 0; padding: 0; }
+    @page { size: A4 portrait; margin: 10mm 8mm; }
+    body { font-family: 'DejaVu Sans', Arial, sans-serif; font-size: 9px; margin: 0; padding: 0; }
     table { border-collapse: collapse; width: 100%; }
-    td, th { font-size: 9px; }
+    td, th { font-size: 8px; }
 </style>
 </head>
 <body>
@@ -353,7 +362,7 @@ HTML;
         $wk_path = $this->findBinary('wkhtmltopdf');
         if ($wk_path) {
             $cmd = sprintf(
-                '%s --quiet --page-size A4 --orientation Landscape --encoding utf-8 --margin-top 10 --margin-bottom 10 --margin-left 12 --margin-right 12 %s %s 2>&1',
+                '%s --quiet --page-size A4 --orientation Portrait --encoding utf-8 --margin-top 10 --margin-bottom 10 --margin-left 8 --margin-right 8 %s %s 2>&1',
                 escapeshellarg($wk_path),
                 escapeshellarg($html_path),
                 escapeshellarg($pdf_path),
@@ -386,9 +395,9 @@ HTML;
             try {
                 $mpdf = new \Mpdf\Mpdf([
                     'mode'          => 'utf-8',
-                    'format'        => 'A4-L',
-                    'margin_left'   => 12,
-                    'margin_right'  => 12,
+                    'format'        => 'A4',
+                    'margin_left'   => 8,
+                    'margin_right'  => 8,
                     'margin_top'    => 10,
                     'margin_bottom' => 10,
                     'tempDir'       => $tmp_dir,

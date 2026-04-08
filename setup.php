@@ -248,8 +248,8 @@ function plugin_version_order()
     return [
         'name'           => __s("Orders management", "order"),
         'version'        => PLUGIN_ORDER_VERSION,
-        'author'         => 'The plugin order team',
-        'homepage'       => 'https://github.com/pluginsGLPI/order',
+        'author'         => 'geek95dg',
+        'homepage'       => 'https://github.com/geek95dg/order',
         'license'        => 'GPLv2+',
         'requirements'   => [
             'glpi' => [
