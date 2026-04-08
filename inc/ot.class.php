@@ -132,7 +132,67 @@ class PluginOrderOt
             'is_recursive'               => (int) ($order->fields['is_recursive'] ?? 0),
         ]);
 
-        return $bill_id ?: false;
+        if (!$bill_id) {
+            return false;
+        }
+
+        // Link all order items to this bill and set their bill state to PAID
+        $this->linkBillToOrderItems($order, $bill_id, $bill);
+
+        return $bill_id;
+    }
+
+
+    /**
+     * Link a bill to all order items and update their Infocom records.
+     *
+     * @param PluginOrderOrder $order   The order (already loaded)
+     * @param int              $bill_id The newly created bill ID
+     * @param PluginOrderBill  $bill    The bill object (already loaded after add)
+     */
+    private function linkBillToOrderItems(PluginOrderOrder $order, int $bill_id, PluginOrderBill $bill): void
+    {
+        /** @var DBmysql $DB */
+        global $DB;
+
+        $order_id = $order->getID();
+        $bill->getFromDB($bill_id);
+
+        // Get all order items for this order
+        $items_result = $DB->request([
+            'FROM'  => 'glpi_plugin_order_orders_items',
+            'WHERE' => ['plugin_order_orders_id' => $order_id],
+        ]);
+
+        $order_item = new PluginOrderOrder_Item();
+        $config = PluginOrderConfig::getConfig();
+
+        foreach ($items_result as $item_data) {
+            // Update order item with bill ID and PAID state
+            $order_item->update([
+                'id'                         => $item_data['id'],
+                'plugin_order_bills_id'      => $bill_id,
+                'plugin_order_billstates_id' => PluginOrderBillState::PAID,
+            ]);
+
+            // Update Infocom on the linked asset (if delivered and config allows)
+            if ($config->canAddBillDetails()
+                && !empty($item_data['itemtype'])
+                && (int) $item_data['items_id'] > 0
+            ) {
+                $ic = new Infocom();
+                if ($ic->getFromDBforDevice($item_data['itemtype'], (int) $item_data['items_id'])) {
+                    $ic->update([
+                        'id'            => $ic->fields['id'],
+                        'bill'          => $bill->fields['number'],
+                        'warranty_date' => $bill->fields['billdate'],
+                    ]);
+                }
+            }
+        }
+
+        // Update order's aggregate bill state
+        PluginOrderOrder::updateBillState($order_id);
     }
 
 

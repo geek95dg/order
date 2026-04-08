@@ -1,8 +1,8 @@
-# Order Plugin v2.13.0 - QA Test Plan
+# Order Plugin v2.13.1 - QA Test Plan
 
 ## Prerequisites
 
-- GLPI 11.0.x instance with the Order plugin v2.13.0 installed
+- GLPI 11.0.x instance with the Order plugin v2.13.1 installed
 - At least one user-defined custom asset type created in **Setup > Asset Definitions** (e.g. "Laptop", "Mobile Phone")
 - At least one Supplier configured
 - At least one Budget configured
@@ -14,8 +14,8 @@
 
 | # | Test | Steps | Expected Result | Pass |
 |---|------|-------|-----------------|------|
-| 1.1 | Fresh install | Upload plugin to `plugins/order/`, go to Setup > Plugins, click Install then Enable | Plugin installs without errors, status shows "Enabled", version shows 2.13.0 | [ ] |
-| 1.2 | Upgrade from 2.12.4 | Replace plugin files, go to Setup > Plugins, click Update then Enable | Plugin updates without errors, no data loss, version shows 2.13.0 | [ ] |
+| 1.1 | Fresh install | Upload plugin to `plugins/order/`, go to Setup > Plugins, click Install then Enable | Plugin installs without errors, status shows "Enabled", version shows 2.13.1 | [ ] |
+| 1.2 | Upgrade from 2.12.4 | Replace plugin files, go to Setup > Plugins, click Update then Enable | Plugin updates without errors, no data loss, version shows 2.13.1 | [ ] |
 | 1.3 | Plugin page loads | Navigate to Management > Orders | Orders list loads without errors | [ ] |
 
 ---
@@ -112,6 +112,12 @@
 | 6.29 | No bill without invoice | Generate OT without entering invoice number | No bill record is created | [ ] |
 | 6.30 | Bill success message | Generate OT with invoice number | Success message includes bill creation confirmation | [ ] |
 | 6.31 | Special chars in invoice | Enter invoice with special chars "FV/2026/001 & test" | Bill created correctly, OT PDF shows escaped characters | [ ] |
+| 6.32 | Bill linked to order items | Generate OT with invoice number, go to order's Faktura tab | Each order item shows the bill number in "Faktura" column | [ ] |
+| 6.33 | Item bill status set to Paid | Check "Status faktury" column for each item in Faktura tab | All items show "Zapłacony" (Paid) status | [ ] |
+| 6.34 | Order aggregate bill state | After OT+bill generation, check order's bill payment status | Order shows "Zapłacony" (Paid) overall payment status | [ ] |
+| 6.35 | Infocom updated with bill | Go to a delivered asset > Management tab > check Infocom | Bill number and warranty date are populated from the auto-created bill | [ ] |
+| 6.36 | All items linked (multi-item order) | Generate OT with invoice for order with 5+ items, check Faktura tab | All items (not just some) have the bill number and Paid status | [ ] |
+| 6.37 | No item linking without invoice | Generate OT without entering invoice number, check Faktura tab | Order items have no bill linked, bill columns remain empty | [ ] |
 
 ---
 
@@ -167,4 +173,4 @@
 
 ---
 
-*Generated for Order Plugin v2.13.0 - QA before production deployment*
+*Generated for Order Plugin v2.13.1 - QA before production deployment*

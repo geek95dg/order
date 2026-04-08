@@ -38,13 +38,19 @@ Obtain a personalized service experience, associated with benefits and opportuni
 
 ## Changelog
 
+### 2.13.1
+
+**Improvements**
+
+- **Bill-to-Item Linking on OT Generation**: When generating an OT with an invoice number, the auto-created bill is now linked to all order items. Each item's bill reference and payment status are set to Paid, Infocom records on delivered assets are updated with the bill number and warranty date, and the order's aggregate bill state is updated accordingly. This ensures the "Faktura" (Invoice) and "Status faktury" (Invoice status) columns are populated in the delivered items view.
+
 ### 2.13.0
 
 **New Features**
 
 - **GLPI 11+ Custom Assets Support**: User-defined custom assets (stored in `glpi_assets_assets`) are now dynamically discovered and available as product references. Type, Model, and Template dropdowns work correctly for custom asset classes, including proper scoping via `assets_assetdefinitions_id`.
 
-- **OT Protocol PDF Generation**: Generate OT (fixed assets protocol) documents directly from orders. Accessible via the "Generate OT" action in the Actions dropdown. Prompts for a Cost Center (MPK) value, then generates a PDF containing all delivered items with their serial numbers, values, and delivery dates. Uses a system binary fallback chain (wkhtmltopdf → Chromium → mPDF → HTML). Generated documents are saved to the GLPI document system and linked to the order.
+- **OT Protocol PDF Generation**: Generate OT (fixed assets protocol) documents directly from orders. Accessible via the "Generate OT" action in the Actions dropdown. Prompts for a Cost Center (MPK) and Invoice Number, then generates a PDF containing all delivered items with their serial numbers, values, and delivery dates. Uses a system binary fallback chain (wkhtmltopdf → Chromium → mPDF → HTML). Generated documents are saved to the GLPI document system and linked to the order. When an invoice number is provided, a Bill record is automatically created with supplier, amount, paid status, and linked to all order items.
 
 ## Contributing
 
