@@ -98,6 +98,20 @@
 | 6.15 | OT saved as document | Go to order's Documents tab | Generated OT document is linked to the order | [ ] |
 | 6.16 | OT with no delivered items | Try generating OT for order with no deliveries | Graceful failure, error message shown | [ ] |
 | 6.17 | OT multiple orders | Select multiple orders, generate OT | Each order gets its own document, last one downloads | [ ] |
+| 6.18 | Invoice Number prompt | Select order(s), click "Generate OT" | Popup shows "Invoice Number" input field alongside "Cost Center (MPK)" | [ ] |
+| 6.19 | OT content - invoice number | Enter invoice number "FV/2026/001", generate OT | "Numer faktury:" field shows "FV/2026/001" | [ ] |
+| 6.20 | OT content - empty invoice | Generate OT with empty invoice number field | "Numer faktury:" field shows underscores (fallback) | [ ] |
+| 6.21 | Bill auto-created | Enter invoice number, generate OT, go to Management > Orders > Bill | New bill exists with name and number = invoice number | [ ] |
+| 6.22 | Bill supplier | Check the auto-created bill's Supplier field | Matches the order's supplier | [ ] |
+| 6.23 | Bill value | Check the auto-created bill's Value field | Matches order's total price (tax-free / priceHT) | [ ] |
+| 6.24 | Bill status | Check the auto-created bill's Status | Status = "Paid" (Zapłacony) | [ ] |
+| 6.25 | Bill dates | Check bill's Date and Approval date fields | Both set to the date of OT generation | [ ] |
+| 6.26 | Bill approver | Check the auto-created bill's Approver | Set to the user who generated the OT | [ ] |
+| 6.27 | Bill order link | Check the auto-created bill's Order field | Points to the correct order | [ ] |
+| 6.28 | Bill entity | Check the auto-created bill's entity | Matches the order's entity | [ ] |
+| 6.29 | No bill without invoice | Generate OT without entering invoice number | No bill record is created | [ ] |
+| 6.30 | Bill success message | Generate OT with invoice number | Success message includes bill creation confirmation | [ ] |
+| 6.31 | Special chars in invoice | Enter invoice with special chars "FV/2026/001 & test" | Bill created correctly, OT PDF shows escaped characters | [ ] |
 
 ---
 
