@@ -38,7 +38,7 @@ Obtain a personalized service experience, associated with benefits and opportuni
 
 ## Changelog
 
-### 2.0.0 (Unreleased)
+### 2.13.0
 
 **New Features**
 

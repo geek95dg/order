@@ -2617,21 +2617,23 @@ class PluginOrderOrder extends CommonDBTM
             /** @var array $CFG_GLPI */
             global $CFG_GLPI;
 
-            $input       = $ma->getInput();
-            $cost_center = $input['cost_center'] ?? '';
-            $last_doc_id = 0;
+            $input          = $ma->getInput();
+            $cost_center    = $input['cost_center'] ?? '';
+            $invoice_number = $input['invoice_number'] ?? '';
+            $last_doc_id    = 0;
 
             foreach ($ids as $id) {
                 $ot     = new PluginOrderOt();
-                $doc_id = $ot->processAction((int) $id, $cost_center);
-                if ($doc_id) {
-                    $last_doc_id = $doc_id;
+                $result = $ot->processAction((int) $id, $cost_center, $invoice_number);
+                if ($result && $result['doc_id']) {
+                    $last_doc_id = $result['doc_id'];
                     $ma->itemDone($item->getType(), $id, MassiveAction::ACTION_OK);
-                    Session::addMessageAfterRedirect(
-                        sprintf(__s("OT document generated for order #%s", "order"), $id),
-                        true,
-                        INFO,
-                    );
+
+                    $msg = sprintf(__s("OT document generated for order #%s", "order"), $id);
+                    if (!empty($result['bill_id'])) {
+                        $msg .= ' - ' . sprintf(__s("Bill #%s created", "order"), $result['bill_id']);
+                    }
+                    Session::addMessageAfterRedirect($msg, true, INFO);
                 } else {
                     $ma->itemDone($item->getType(), $id, MassiveAction::ACTION_KO);
                     $ma->addMessage(__s("Failed to generate OT document", "order"));

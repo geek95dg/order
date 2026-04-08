@@ -38,6 +38,13 @@ class PluginOrderOt
      */
     public static function showMassiveActionSubForm(): void
     {
+        echo "<label for='invoice_number'>" . __s("Invoice Number", "order") . ":&nbsp;</label>";
+        echo Html::input('invoice_number', [
+            'id'    => 'invoice_number',
+            'value' => '',
+            'size'  => 30,
+        ]);
+        echo "<br><br>";
         echo "<label for='cost_center'>" . __s("Cost Center", "order") . " (MPK):&nbsp;</label>";
         echo Html::input('cost_center', [
             'id'    => 'cost_center',
@@ -50,20 +57,21 @@ class PluginOrderOt
 
 
     /**
-     * Full orchestration: generate HTML -> PDF -> save as Document -> return document ID.
+     * Full orchestration: generate HTML -> PDF -> save as Document -> create Bill -> return result.
      *
-     * @param int    $order_id    The order ID
-     * @param string $cost_center Cost Center / MPK value entered by user
-     * @return int|false Document ID on success, false on failure
+     * @param int    $order_id       The order ID
+     * @param string $cost_center    Cost Center / MPK value entered by user
+     * @param string $invoice_number Invoice number entered by user
+     * @return array|false ['doc_id' => int, 'bill_id' => int|false] on success, false on failure
      */
-    public function processAction(int $order_id, string $cost_center)
+    public function processAction(int $order_id, string $cost_center, string $invoice_number = '')
     {
         $order = new PluginOrderOrder();
         if (!$order->getFromDB($order_id)) {
             return false;
         }
 
-        $html = $this->generateOtHtml($order, $cost_center);
+        $html = $this->generateOtHtml($order, $cost_center, $invoice_number);
         $num_order = $order->fields['num_order'] ?: $order_id;
         $base_name = 'OT_' . preg_replace('/[^a-zA-Z0-9_\-]/', '_', $num_order);
 
@@ -78,18 +86,65 @@ class PluginOrderOt
 
         $doc_id = $this->saveAsDocument($order, $pdf_path, $base_name . '.' . $ext, $mime);
 
-        return $doc_id;
+        // Auto-create bill if invoice number provided
+        $bill_id = false;
+        if ($invoice_number !== '') {
+            $bill_id = $this->createBill($order, $invoice_number);
+        }
+
+        return [
+            'doc_id'  => $doc_id,
+            'bill_id' => $bill_id,
+        ];
+    }
+
+
+    /**
+     * Create a PluginOrderBill record for the order.
+     *
+     * @param PluginOrderOrder $order          The order (already loaded)
+     * @param string           $invoice_number Invoice number entered by user
+     * @return int|false Bill ID on success, false on failure
+     */
+    private function createBill(PluginOrderOrder $order, string $invoice_number)
+    {
+        $order_id = $order->getID();
+
+        // Get total price (tax-free)
+        $order_item = new PluginOrderOrder_Item();
+        $prices = $order_item->getAllPrices($order_id);
+        $value = (float) ($prices['priceHT'] ?? 0);
+
+        $today = date('Y-m-d');
+
+        $bill = new PluginOrderBill();
+        $bill_id = $bill->add([
+            'name'                       => $invoice_number,
+            'number'                     => $invoice_number,
+            'suppliers_id'               => (int) $order->fields['suppliers_id'],
+            'value'                      => $value,
+            'plugin_order_orders_id'     => $order_id,
+            'plugin_order_billstates_id' => PluginOrderBillState::PAID,
+            'billdate'                   => $today,
+            'validationdate'             => $today,
+            'users_id_validation'        => Session::getLoginUserID(),
+            'entities_id'                => (int) $order->fields['entities_id'],
+            'is_recursive'               => (int) ($order->fields['is_recursive'] ?? 0),
+        ]);
+
+        return $bill_id ?: false;
     }
 
 
     /**
      * Build the full HTML document matching the OT.xlsx template layout.
      *
-     * @param PluginOrderOrder $order       The order object (already loaded)
-     * @param string           $cost_center Cost Center value
+     * @param PluginOrderOrder $order          The order object (already loaded)
+     * @param string           $cost_center    Cost Center value
+     * @param string           $invoice_number Invoice number
      * @return string Complete HTML document
      */
-    public function generateOtHtml(PluginOrderOrder $order, string $cost_center): string
+    public function generateOtHtml(PluginOrderOrder $order, string $cost_center, string $invoice_number = ''): string
     {
         /** @var DBmysql $DB */
         global $DB;
@@ -156,9 +211,10 @@ class PluginOrderOt
             ];
         }
 
-        $supplier_esc   = htmlspecialchars($supplier_name, ENT_QUOTES, 'UTF-8');
+        $supplier_esc    = htmlspecialchars($supplier_name, ENT_QUOTES, 'UTF-8');
         $cost_center_esc = htmlspecialchars($cost_center, ENT_QUOTES, 'UTF-8');
-        $num_order_esc  = htmlspecialchars($num_order, ENT_QUOTES, 'UTF-8');
+        $num_order_esc   = htmlspecialchars($num_order, ENT_QUOTES, 'UTF-8');
+        $invoice_display = $invoice_number !== '' ? htmlspecialchars($invoice_number, ENT_QUOTES, 'UTF-8') : '_______________';
         $total_formatted = number_format($total_value, 2, ',', ' ');
 
         // Build item rows HTML
@@ -234,7 +290,7 @@ class PluginOrderOt
 <table>
     <tr>
         <td style="width:40%;padding:4px 0;">
-            <strong>Numer faktury:</strong> _______________
+            <strong>Numer faktury:</strong> {$invoice_display}
         </td>
         <td style="width:60%;padding:4px 0;">
             <strong>Dostawca / Producent:</strong> {$supplier_esc}
