@@ -28,29 +28,19 @@
  * -------------------------------------------------------------------------
  */
 
-use Rector\Configuration\RectorConfigBuilder;
+/**
+ * Options of the mappable-field dropdown, for one itemtype.
+ */
 
-require_once __DIR__ . '/../../src/Plugin.php';
+Session::checkLoginUser();
+Session::checkRight('config', UPDATE);
 
-$baseline_file = __DIR__ . '/../../PluginsRector.php';
-if (!file_exists($baseline_file)) {
-    throw new RuntimeException(
-        sprintf(
-            'Unable to find "%s". Running rector on a plugin requires a GLPI development checkout that ships PluginsRector.php.',
-            $baseline_file,
-        ),
-    );
+$itemtype = (string) ($_GET['itemtype'] ?? '');
+$fields   = PluginOrderGenerationField::getAvailableFields($itemtype);
+
+echo "<option value=''>-----</option>";
+foreach ($fields as $field => $label) {
+    echo "<option value='" . htmlescape($field) . "'>"
+       . htmlescape(sprintf('%s (%s)', $label, $field))
+       . "</option>";
 }
-
-$baseline = require $baseline_file;
-
-/** @var RectorConfigBuilder $config */
-$config = $baseline([
-    __DIR__ . '/ajax',
-    __DIR__ . '/front',
-    __DIR__ . '/inc',
-    __DIR__ . '/report',
-    __DIR__ . '/stubs',
-]);
-
-return $config;

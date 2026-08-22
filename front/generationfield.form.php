@@ -28,29 +28,24 @@
  * -------------------------------------------------------------------------
  */
 
-use Rector\Configuration\RectorConfigBuilder;
+Session::checkLoginUser();
+Session::checkRight('config', UPDATE);
 
-require_once __DIR__ . '/../../src/Plugin.php';
+// The 'config' right only carries READ/UPDATE bits, so UPDATE - checked
+// above - is the whole gate; per-item CREATE/PURGE checks would always deny.
+$mapping = new PluginOrderGenerationField();
 
-$baseline_file = __DIR__ . '/../../PluginsRector.php';
-if (!file_exists($baseline_file)) {
-    throw new RuntimeException(
-        sprintf(
-            'Unable to find "%s". Running rector on a plugin requires a GLPI development checkout that ships PluginsRector.php.',
-            $baseline_file,
-        ),
-    );
+if (isset($_POST['add'])) {
+    $mapping->add([
+        'itemtype' => (string) ($_POST['itemtype'] ?? ''),
+        'field'    => (string) ($_POST['field'] ?? ''),
+    ]);
+    Html::back();
 }
 
-$baseline = require $baseline_file;
+if (isset($_POST['purge'])) {
+    $mapping->delete(['id' => (int) $_POST['id']], true);
+    Html::back();
+}
 
-/** @var RectorConfigBuilder $config */
-$config = $baseline([
-    __DIR__ . '/ajax',
-    __DIR__ . '/front',
-    __DIR__ . '/inc',
-    __DIR__ . '/report',
-    __DIR__ . '/stubs',
-]);
-
-return $config;
+Html::redirect(PluginOrderConfig::getFormURL());
