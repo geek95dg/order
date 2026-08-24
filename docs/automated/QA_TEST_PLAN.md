@@ -29,6 +29,9 @@ Zero JS console errors and zero HTTP 5xx across all runs.
 | az9/az9b/c | Buttons & purge | Validation-tab buttons use semantic classes (btn-danger/success/primary), trashbin massive action, permanent purge clean including reminder-ledger rows | PASS |
 | az10 | Upstream regressions | SoftwareLicense "Take item delivery" + "Cancel reception" (upstream #587), custom asset offered in the reference form and labelled on an existing reference | PASS |
 | az11b | Columns | "Invoiced" column renders Yes/No per order, bills list "Archived" column flags the superseded bill | PASS |
+| az12 | Extra-field inputs | Real-keyboard typing into mapped columns, input width equals the serial column, typed values land in all three stores (fix `20b77f2`) | PASS |
+
+Filled questionnaire with per-section evidence: **`QA_WYNIKI_2026-08-24.md`** (this directory).
 
 Fresh-install checks: schema complete (mapping + reminder tables, `date_creation`, `is_archived`,
 `mail_header_filename`), both cron tasks registered, all 7 notifications seeded (incl. `not_invoiced`),
