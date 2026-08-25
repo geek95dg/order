@@ -34,6 +34,9 @@ class PluginOrderConfig extends CommonDBTM
 {
     public static $rightname = 'config';
 
+    /** Header image location, relative to GLPI's files directory. */
+    private const MAIL_HEADER_SUBDIR = '_plugins/order/mailheader';
+
     public const CONFIG_NEVER   = 0;
 
     public const CONFIG_YES     = 1;
@@ -671,6 +674,7 @@ class PluginOrderConfig extends CommonDBTM
         if (!empty($input['_drop_mail_header'])) {
             $current = $this->getMailHeaderPath();
             if ($current !== null) {
+                self::dropMailHeaderDocument(basename($current));
                 @unlink($current);
             }
             $input['mail_header_filename'] = '';
@@ -721,8 +725,11 @@ class PluginOrderConfig extends CommonDBTM
             return $input;
         }
 
-        // One header at a time: drop whatever was there before.
+        // One header at a time: drop whatever was there before, Document row
+        // included - purging one deletes its file, so it has to happen before
+        // the replacement is written.
         foreach (glob($dir . '/header.*') ?: [] as $old) {
+            self::dropMailHeaderDocument(basename($old));
             @unlink($old);
         }
 
@@ -1003,7 +1010,66 @@ class PluginOrderConfig extends CommonDBTM
      */
     public static function getMailHeaderDir(): string
     {
-        return GLPI_DOC_DIR . '/_plugins/order/mailheader';
+        return GLPI_DOC_DIR . '/' . self::MAIL_HEADER_SUBDIR;
+    }
+
+
+    /**
+     * The header image as a GLPI Document, created the first time it is needed.
+     *
+     * Mail clients routinely refuse to fetch remote images, and the recipient
+     * has no GLPI session anyway, so a header referenced by URL shows up as a
+     * broken image. Pointing at document.send.php instead makes GLPI's mailer
+     * embed the file in the message itself (an inline cid: part) while it is
+     * being sent, which needs neither a reachable server nor a session.
+     *
+     * @return int|null Document ID, or null when no header is configured
+     */
+    public function getMailHeaderDocumentId(): ?int
+    {
+        $path = $this->getMailHeaderPath();
+        if ($path === null) {
+            return null;
+        }
+
+        $filepath = self::MAIL_HEADER_SUBDIR . '/' . basename($path);
+
+        $document = new Document();
+        $existing = $document->find(['filepath' => $filepath]);
+        if ($existing !== []) {
+            return (int) reset($existing)['id'];
+        }
+
+        $size = @getimagesize($path);
+        $id   = $document->add([
+            'name'         => __s("Message header", "order"),
+            'filename'     => basename($path),
+            'filepath'     => $filepath,
+            'mime'         => $size !== false ? $size['mime'] : 'image/png',
+            'entities_id'  => 0,
+            'is_recursive' => 1,
+        ]);
+
+        return $id ? (int) $id : null;
+    }
+
+
+    /**
+     * Forget the Document wrapping a header file that is about to disappear.
+     *
+     * Purging takes the file with it, so this must run before a replacement is
+     * written - otherwise GLPI would delete the freshly uploaded header.
+     */
+    private static function dropMailHeaderDocument(string $filename): void
+    {
+        if ($filename === '') {
+            return;
+        }
+
+        $document = new Document();
+        foreach ($document->find(['filepath' => self::MAIL_HEADER_SUBDIR . '/' . $filename]) as $row) {
+            $document->delete(['id' => (int) $row['id']], true);
+        }
     }
 
 
