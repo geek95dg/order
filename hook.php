@@ -428,23 +428,44 @@ function plugin_order_prepend_mail_header(QueuedNotification $item)
             return;
         }
 
+        /** @var array $CFG_GLPI */
+        global $CFG_GLPI;
+
         $config = PluginOrderConfig::getConfig();
         if (!method_exists($config, 'getMailHeaderUrl')) {
             return;
         }
 
-        $url = $config->getMailHeaderUrl();
-        if ($url === null || $url === '') {
-            return;
+        // Point at the image the way GLPI points at its own inline images: on
+        // its way out the mailer turns a document.send.php source into an
+        // embedded cid: part, so the header travels inside the message instead
+        // of being fetched - mail clients block remote images, and the
+        // recipient has no session to fetch one with anyway. The plain URL
+        // stays as a fallback for a header that has no Document yet.
+        $document_id = method_exists($config, 'getMailHeaderDocumentId')
+            ? $config->getMailHeaderDocumentId()
+            : null;
+
+        if ($document_id !== null) {
+            $src = $CFG_GLPI['url_base'] . '/front/document.send.php?docid=' . $document_id;
+        } else {
+            $src = (string) $config->getMailHeaderUrl();
         }
 
-        $img = "<div style='margin:0 0 16px 0;'><img src='" . htmlescape($url)
-             . "' alt='' style='max-width:100%;height:auto;'></div>";
+        if ($src === '') {
+            return;
+        }
 
         // Already decorated (a retry, or a body built from an earlier queue row)?
-        if (str_contains($html, 'plugins/order/front/mailheader.php')) {
+        if (
+            str_contains($html, 'plugins/order/front/mailheader.php')
+            || str_contains($html, 'document.send.php?docid=' . $document_id)
+        ) {
             return;
         }
+
+        $img = "<div style='margin:0 0 16px 0;'><img src='" . htmlescape($src)
+             . "' alt='' style='max-width:100%;height:auto;'></div>";
 
         // The queued body is normally a full HTML document: inject right after
         // <body>, falling back to a plain prepend for bodies without one. The
