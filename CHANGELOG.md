@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Plugin setup can hold an uploaded header image, prepended to every e-mail the plugin sends (native notifications included)
 - Administrator-mapped extra asset fields (e.g. an IMEI) as additional columns on the item generation form, per item type - covering plain table columns, the fields plugin and GLPI 11 custom assets
 - The OT popup can use a mapped extra field (e.g. IMEI) as the document's serial-number source, falling back per item
+- CLI tools for the notification chain: `tools/diagnose_notifications.php` (read-only report naming the first thing that silently stops a notification - the plugin's native notifications ship active but without recipients, so they can never be sent) and `tools/seed_notification_targets.php` (fills the missing recipient, preview by default, `--apply` to write)
 
 ### Fixed
 
