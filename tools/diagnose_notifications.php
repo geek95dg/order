@@ -41,15 +41,78 @@
 
 use Glpi\Kernel\Kernel;
 
-$root = dirname(__DIR__, 3);
-if (!is_file($root . '/vendor/autoload.php')) {
-    fwrite(STDERR, "Run this script from the GLPI root: php plugins/order/tools/diagnose_notifications.php\n");
+/**
+ * Fail with an explanation instead of a stack trace: this script is meant to be
+ * run on a production box by someone chasing a different problem entirely.
+ */
+function bail(string $title, array $hints): never
+{
+    fwrite(STDERR, "\n" . $title . "\n");
+    foreach ($hints as $hint) {
+        fwrite(STDERR, '  - ' . $hint . "\n");
+    }
+    fwrite(STDERR, "\n");
     exit(1);
+}
+
+// PHP extensions GLPI needs before its kernel can even reach the database.
+// Without this guard a missing mysqli surfaces as a cryptic
+// "Attempted to call function mysqli_report from the global namespace".
+$missing = array_values(array_filter(
+    ['mysqli', 'json', 'mbstring'],
+    static fn(string $ext): bool => !extension_loaded($ext),
+));
+if ($missing !== []) {
+    bail(
+        'This PHP binary (' . PHP_BINARY . ', ' . PHP_VERSION . ') is missing: ' . implode(', ', $missing),
+        [
+            'Run the script with the same PHP that serves GLPI - the web server (php-fpm) and the CLI'
+                . ' often load different extension sets.',
+            'Find a usable binary: for p in php php8.2 php8.3 php8.4; do printf "%s: " "$p";'
+                . ' "$p" -r \'echo extension_loaded("mysqli") ? "ok" : "no mysqli";\' 2>/dev/null; echo; done',
+            'Debian/Ubuntu: apt install php8.3-mysql, then phpenmod -v 8.3 -s cli mysqli',
+            'RHEL/Alma: dnf install php-mysqlnd',
+        ],
+    );
+}
+
+// The plugin lives under plugins/ or marketplace/, so walk up until the GLPI
+// root shows itself; --glpi=/path overrides the search.
+$root = null;
+foreach ($argv as $arg) {
+    if (preg_match('/^--glpi=(.+)$/', $arg, $m)) {
+        $root = rtrim($m[1], '/');
+    }
+}
+if ($root === null) {
+    $candidate = __DIR__;
+    for ($depth = 0; $depth < 6; $depth++) {
+        $candidate = dirname($candidate);
+        if (is_file($candidate . '/vendor/autoload.php') && is_dir($candidate . '/src')) {
+            $root = $candidate;
+            break;
+        }
+    }
+}
+
+if ($root === null || !is_file($root . '/vendor/autoload.php')) {
+    bail('Could not locate the GLPI root above ' . __DIR__, [
+        'Pass it explicitly: php ' . basename(__FILE__) . ' --glpi=/var/www/html/glpi',
+    ]);
 }
 
 chdir($root);
 require_once $root . '/vendor/autoload.php';
-(new Kernel())->boot();
+
+try {
+    (new Kernel())->boot();
+} catch (\Throwable $e) {
+    bail('GLPI could not start: ' . $e->getMessage(), [
+        'Root used: ' . $root,
+        'Run the script as the web server user, e.g. sudo -u www-data ...',
+        'Check that ' . $root . '/config/config_db.php is readable by that user.',
+    ]);
+}
 
 $_SESSION['glpi_currenttime']          = date('Y-m-d H:i:s');
 $_SESSION['glpiactive_entity']         = 0;
