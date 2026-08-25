@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Plugin setup can hold an uploaded header image, prepended to every e-mail the plugin sends (native notifications included)
 - Administrator-mapped extra asset fields (e.g. an IMEI) as additional columns on the item generation form, per item type - covering plain table columns, the fields plugin and GLPI 11 custom assets
 - The OT popup can use a mapped extra field (e.g. IMEI) as the document's serial-number source, falling back per item
+- CLI tools for the notification chain: `tools/diagnose_notifications.php` (read-only report naming the first thing that silently stops a notification - the plugin's native notifications ship active but without recipients, so they can never be sent) and `tools/seed_notification_targets.php` (fills the missing recipient, preview by default, `--apply` to write)
 
 ### Fixed
 
@@ -32,7 +33,6 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Purging an order removes its reminder-ledger rows
 - Mapped extra-field inputs on the generation form get the same minimum column width as the other text columns - they were crushed to a few pixels, which also made typed characters invisible
 - Prepending the mail header can no longer affect whether a notification is queued: the hook is fully guarded, skips messages it already decorated, and builds the replacement through a callback so no character of the image markup can be read as a regex backreference
-- New `tools/diagnose_notifications.php` and `tools/seed_notification_targets.php`: the plugin creates its notifications active but without recipients, so they could never be sent and nothing said so - the first names that (and every other break in the chain), the second fills in the missing recipient
 - Uploading the mail header now confirms with a message and shows the preview through a root-relative URL (independent of url_base); a stale schema is reported instead of silently ignoring the upload
 - Fix fatal error when opening the "Generate item" massive action form for
   assignable assets (including GLPI 11 custom assets): an array value reaching a

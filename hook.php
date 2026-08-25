@@ -32,6 +32,7 @@ use function Safe\copy;
 use function Safe\glob;
 use function Safe\mkdir;
 use function Safe\preg_match;
+use function Safe\preg_replace_callback;
 
 /**
  * Plugin install process

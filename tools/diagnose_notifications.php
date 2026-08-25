@@ -403,7 +403,11 @@ if ($order_id !== null) {
         };
 
         $rows = $DB->request([
-            'SELECT'    => ['glpi_notifications.event', 'glpi_notificationtargets.items_id'],
+            'SELECT'    => [
+                'glpi_notifications.event',
+                'glpi_notificationtargets.items_id',
+                'glpi_notificationtargets.type',
+            ],
             'FROM'      => 'glpi_notificationtargets',
             'INNER JOIN' => [
                 'glpi_notifications' => [
@@ -418,6 +422,26 @@ if ($order_id !== null) {
         ]);
 
         foreach ($rows as $row) {
+            // The special items_id constants only mean anything for USER_TYPE
+            // rows: a profile or group target reuses items_id as a plain
+            // profile/group id, so labelling those with the constants would
+            // misreport what the administrator configured.
+            if ((int) $row['type'] !== Notification::USER_TYPE) {
+                [$label, $resolved] = match ((int) $row['type']) {
+                    Notification::PROFILE_TYPE => [
+                        'Profil #' . $row['items_id'],
+                        '(kazdy uzytkownik tego profilu z adresem e-mail)',
+                    ],
+                    Notification::GROUP_TYPE => [
+                        'Grupa #' . $row['items_id'],
+                        '(czlonkowie grupy z adresem e-mail)',
+                    ],
+                    default => ['cel typu #' . $row['type'] . ' / #' . $row['items_id'], ''],
+                };
+                printf("  %-16s -> %-28s %s\n", $row['event'], $label, $resolved);
+                continue;
+            }
+
             $label = $target_labels[$row['items_id']] ?? ('cel #' . $row['items_id']);
             $resolved = match ((int) $row['items_id']) {
                 PluginOrderNotificationTargetOrder::AUTHOR
