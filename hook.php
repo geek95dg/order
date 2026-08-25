@@ -409,25 +409,59 @@ function plugin_order_AssignToTicket($types)
  */
 function plugin_order_prepend_mail_header(QueuedNotification $item)
 {
-    if (($item->input['itemtype'] ?? '') !== 'PluginOrderOrder') {
-        return;
+    // Decorating a message must never be able to stop it from being queued:
+    // this hook runs inside QueuedNotification::add(), so anything thrown here
+    // would take the notification - and the user action raising it - down with
+    // it. Failures are logged and the message goes out without the image.
+    try {
+        if (!is_array($item->input ?? null)) {
+            return;
+        }
+
+        if (($item->input['itemtype'] ?? '') !== 'PluginOrderOrder') {
+            return;
+        }
+
+        $html = $item->input['body_html'] ?? '';
+        if (!is_string($html) || $html === '') {
+            return;
+        }
+
+        $config = PluginOrderConfig::getConfig();
+        if (!method_exists($config, 'getMailHeaderUrl')) {
+            return;
+        }
+
+        $url = $config->getMailHeaderUrl();
+        if ($url === null || $url === '') {
+            return;
+        }
+
+        $img = "<div style='margin:0 0 16px 0;'><img src='" . htmlescape($url)
+             . "' alt='' style='max-width:100%;height:auto;'></div>";
+
+        // Already decorated (a retry, or a body built from an earlier queue row)?
+        if (str_contains($html, 'plugins/order/front/mailheader.php')) {
+            return;
+        }
+
+        // The queued body is normally a full HTML document: inject right after
+        // <body>, falling back to a plain prepend for bodies without one. The
+        // replacement goes through a callback so that no character of the image
+        // markup can ever be read as a backreference.
+        $patched = preg_replace_callback(
+            '/<body[^>]*>/i',
+            static fn(array $matches): string => $matches[0] . $img,
+            $html,
+            1,
+            $count,
+        );
+
+        $item->input['body_html'] = ($count > 0 && is_string($patched)) ? $patched : $img . $html;
+    } catch (\Throwable $e) {
+        trigger_error(
+            'Order plugin: could not prepend the mail header (' . $e->getMessage() . ')',
+            E_USER_WARNING,
+        );
     }
-
-    if (empty($item->input['body_html'])) {
-        return;
-    }
-
-    $url = PluginOrderConfig::getConfig()->getMailHeaderUrl();
-    if ($url === null) {
-        return;
-    }
-
-    $img = "<div style='margin:0 0 16px 0;'><img src='" . htmlescape($url)
-         . "' alt='' style='max-width:100%;height:auto;'></div>";
-
-    $html = $item->input['body_html'];
-    // The queued body is a full HTML document: inject right after <body>,
-    // falling back to a plain prepend for bodies without one.
-    $patched = preg_replace('/(<body[^>]*>)/i', '$1' . $img, $html, 1, $count);
-    $item->input['body_html'] = $count > 0 ? $patched : $img . $html;
 }
