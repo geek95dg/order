@@ -31,6 +31,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - OT file names deduplicate in a loop, so same-second bulk runs cannot overwrite an earlier document
 - Purging an order removes its reminder-ledger rows
 - Mapped extra-field inputs on the generation form get the same minimum column width as the other text columns - they were crushed to a few pixels, which also made typed characters invisible
+- Prepending the mail header can no longer affect whether a notification is queued: the hook is fully guarded, skips messages it already decorated, and builds the replacement through a callback so no character of the image markup can be read as a regex backreference
 - Uploading the mail header now confirms with a message and shows the preview through a root-relative URL (independent of url_base); a stale schema is reported instead of silently ignoring the upload
 - Fix fatal error when opening the "Generate item" massive action form for
   assignable assets (including GLPI 11 custom assets): an array value reaching a
